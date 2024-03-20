@@ -8,7 +8,8 @@ status code: opem
 #include<iostream>
 #include<string>
 #include<limits>
-#include <cstdio>
+#include<cstdio>
+#include <regex>
 
 using namespace std;
 // delcaraço de estruturas
@@ -171,9 +172,9 @@ float getIndividualRent(user* newUser, int userId)
 }
 
 
-void createUser(user* newUser, int qtdUser, republica* rep, bool teste){
+void createUser(user* newUser, int qtdUser, republica* rep, bool rent_division){
 
-    if(teste == true){   
+    if(rent_division == true){   
         for (int i = 0; i < qtdUser; i++) {
             newUser[i].id = i;
             newUser[i].name = getName();
@@ -220,7 +221,7 @@ void printUsers(const user* newUser, int qtdUser){
 }
 /*funçoes relacionadas a criaçao de aruivos */
 
-int creatFile(user *user,republica *republica, int qtdUser){
+int creatFile(user *user,republica *republica, int qtdUser,string date){
 
      FILE *pontArquivo;
         
@@ -233,8 +234,9 @@ int creatFile(user *user,republica *republica, int qtdUser){
     }
         //salvando dados no arquivo 
              fprintf(pontArquivo,"ID;NOME;VALOR_CAIXA;VALOR_QUARTO;VALOR_AGUA;VALOR_LUZ;VALOR_NET;VALOR_SINUCA;VALOR_TOTAL\n");
+             fprintf(pontArquivo,"%s\n",date.c_str());   
                 for(int i = 0; i < qtdUser; i ++){
-
+                    fprintf(pontArquivo,";");
                     fprintf(pontArquivo,"%i",user[i].id);
                     fprintf(pontArquivo,";");
                     fprintf(pontArquivo,"%s",user[i].name.c_str());
@@ -278,21 +280,21 @@ int creatFile(user *user,republica *republica, int qtdUser){
 
 }
 //apendando arquivo 
-int apendeFile(user *user,republica *republica, int qtdUser){
+int apendeFile(user *user,republica *republica, int qtdUser,string date){
 
      FILE *pontArquivo;
-        
+     int teste = 1;    
     //inicializando arquivos
      pontArquivo = fopen("planilha_de_contas.csv","a");
 
         //verificando o arquivo
     if(pontArquivo == NULL){
         cout<<"\no arquivo nao pode ser aberto ou esta sendo utilizado\n";
+        teste = 0;
     }
         //salvando dados no arquivo 
-            
+            fprintf(pontArquivo,"%s\n",date.c_str());
                 for(int i = 0; i < qtdUser; i ++){
-
                 fprintf(pontArquivo,";");
                 fprintf(pontArquivo,";");
                 fprintf(pontArquivo,"%.2f", user[i].caixaRep);
@@ -330,17 +332,16 @@ int apendeFile(user *user,republica *republica, int qtdUser){
         //fechando o arquivo 
         fclose(pontArquivo);
 
-    return 0;
+    return teste;
 
 }
 /* funçoes gerais*/
 bool getUserInput(){
-
-    bool teste;
+    bool rent_divison;
     std::cout << "O aluguel e dividido igualmente?(digite ""1"" para SIM e ""0"" Para NAO): ";
-    std::cin >> teste;
+    std::cin >> rent_divison;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    return teste;
+    return rent_divison;
 }
 int getQtdUser(){
     int qtdUser;
@@ -361,6 +362,35 @@ int criaMenu(){
 
     return menu;
 }
+bool isValidDate(const std::string& dateString){
+    std::regex datePattern("^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])/([12][0-9]{3})$");
+    if (!std::regex_match(dateString,datePattern)){
+        return false;
+    }
+    int day,month,year;
+    sscanf(dateString.c_str(), "%d%d%d", &day,&month,&year);
+    if(month<1||month>12){
+        return false;
+    }
+    if(day>0 && day<=31){
+        return false;
+    }
+    return true;
+}
+std::string getDate(){
+    string date;
+    int testDate = 0; 
+    do{
+        cout<<"digite uma data no formato dd/mm/aaaa";
+        cin>>date;
+        bool validateDate = isValidDate(date);
+        if(validateDate == false){
+            testDate=1;
+        }
+    }while(testDate == 0);
+    return date;
+    
+}
 
 int main(void){
 
@@ -380,45 +410,70 @@ int main(void){
 
             case 1://caso para criaçao de arquivo
             { 
+                string date =getDate();
                 qtdUser = getQtdUser();
                 
                 user newUser[qtdUser];
                 republica rep;
-                bool teste;
+                bool rent_division;
 
-                teste = getUserInput();
+                rent_division = getUserInput();
 
                 //chamada de funçao
                 fill_acouts(&rep);
-                createUser(newUser, qtdUser, &rep, teste);
+                createUser(newUser, qtdUser, &rep, rent_division);
                 printUsers(newUser, qtdUser);
-                creatFile(newUser, &rep, qtdUser);
+                creatFile(newUser, &rep, qtdUser,date);
 
             }
             break;
 
-            case 2:
+            case 2://apendando arquivo ou nova planilha 
             { 
+                string date = getDate();
                 qtdUser = getQtdUser();
                 
                 user newUser[qtdUser];
                 republica rep;
-                bool teste;
+                bool rent_division;
 
-                teste = getUserInput();
+                rent_division = getUserInput();
 
                 //chamada de funçao
                 fill_acouts(&rep);
-                createUser(newUser, qtdUser, &rep, teste);
+                createUser(newUser, qtdUser, &rep, rent_division);
                 printUsers(newUser, qtdUser);
-                apendeFile(newUser, &rep, qtdUser);
+                int verify_apende = apendeFile(newUser, &rep, qtdUser,date);
+                if (verify_apende<0){
+                    cout<<"mes adicionado com sucesso !!!";
+                }
 
             }
             break;
 
-             default:
+            case 3:
+                {
+                    qtdUser = getQtdUser();
+                    user newUser[qtdUser];
+                    republica rep;
+                    bool rent_division;
+
+                    rent_division = getUserInput();
+
+                    //chamada das função 
+
+                    fill_acouts(&rep);
+                    createUser(newUser, qtdUser, &rep, rent_division);
+                    printUsers(newUser, qtdUser);
+
+                     
+
+                }
+            break;
+
+            default:
                 std::cout << "Opção inválida. Digite novamente.";
-             break;
+            break;
 
 
 
